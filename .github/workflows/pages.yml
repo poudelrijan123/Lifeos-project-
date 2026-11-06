@@ -1,0 +1,50 @@
+name: Deploy LifeOS to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'LifeOS-Final-Demo-v10.zip'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify and extract LifeOS source
+        run: |
+          test -f LifeOS-Final-Demo-v10.zip || (echo "LifeOS-Final-Demo-v10.zip is missing from the repository root." && exit 1)
+          mkdir -p site
+          unzip -q LifeOS-Final-Demo-v10.zip -d extracted
+          APP_DIR="extracted/v6/v4/LifeOS-Core-v2"
+          test -f "$APP_DIR/index.html" || (echo "The expected LifeOS index.html was not found." && exit 1)
+          cp -a "$APP_DIR"/. site/
+          touch site/.nojekyll
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
